@@ -1,0 +1,62 @@
+---
+# tasks file for roles/graylog
+- name: install the collector-sidecar
+  yum:
+    name: "{{ collectorpkg }}"
+    state: present
+
+- name: install the nxlog-ce
+  yum:
+    name: "{{ nxlogpkg }}"
+    state: present
+
+- name: install collector-sidecar service
+  shell: graylog-collector-sidecar -service install
+
+- name: start collector-sidecar
+  systemd:
+    state: started
+    enabled: yes
+    name: collector-sidecar
+
+- name: stop nxlog
+  systemd:
+    state: stopped
+    enabled: no
+    name: collector-sidecar
+
+- name: add nxlog to root
+  user:
+    name: nxlog
+    groups: root
+
+- name: chmod spool/nxlog
+  file:
+   path: /var/spool/collector-sidecar/nxlog
+   state: directory
+   recurse: yes
+   owner: nxlog
+   group: nxlog
+
+- name: Change messange
+  file:
+    path: /var/log/messages
+    mode: 0640
+
+- name: Change secure
+  file:
+    path: /var/log/secure
+    mode: 0640
+
+- name: put /etc/graylog/collector-sidecar/collector_sidecar.yml
+  template:
+    dest: /etc/graylog/collector-sidecar/collector_sidecar.yml
+    src: collector_sidecar.yml.j2
+    owner: root
+    group: root
+    mode: 0644
+
+- name: restart collector-sidecar
+  systemd:
+    state: restarted
+    name: collector-sidecar
